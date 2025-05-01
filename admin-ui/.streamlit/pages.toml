@@ -12,4 +12,4 @@ icon = "📝"
 [[pages]]
 path = "page/analysis.py"
 name = "분석 페이지"
-icon = "📊"
+icon = "🔎"

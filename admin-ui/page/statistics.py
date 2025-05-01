@@ -304,7 +304,7 @@ if all_tasks_filtered:
     else:
         st.warning(f"{date_range_option} 동안의 요청 데이터가 없습니다.")
     
-    # 구분선 추가
+    # 일별 요청 수 차트 다음에 구분선 추가
     st.divider()
     
     # 요청자 및 레포지토리 통계
@@ -363,6 +363,92 @@ if all_tasks_filtered:
             delta=delta_text,
             border=True
         )
+        
+        # 사용자 추이 그래프 추가
+        st.markdown("### 사용자 활동 추이")
+        
+        # 날짜별 활성 사용자 계산
+        user_activity_by_date = {}
+        
+        # 전체 작업에서 날짜별 활성 사용자 집계
+        for task in all_tasks:
+            task_date = extract_task_date(task)
+            if not task_date:
+                continue
+                
+            requester = extract_requester(task)
+            
+            # 날짜별 사용자 집계
+            if task_date not in user_activity_by_date:
+                user_activity_by_date[task_date] = set()
+            
+            user_activity_by_date[task_date].add(requester)
+        
+        # 날짜별 사용자 수를 데이터프레임으로 변환
+        user_dates = []
+        user_counts = []
+        
+        for date, users in sorted(user_activity_by_date.items()):
+            user_dates.append(date)
+            user_counts.append(len(users))
+        
+        # 사용자 추이 데이터프레임 생성
+        user_trend_df = pd.DataFrame({
+            "날짜": pd.to_datetime(user_dates),
+            "활성사용자": user_counts
+        })
+        
+        if not user_trend_df.empty:
+            # 7일 이동 평균 계산
+            user_trend_df['7일평균'] = user_trend_df['활성사용자'].rolling(window=7, min_periods=1).mean()
+            
+            # Plotly로 사용자 추이 차트 생성
+            fig = go.Figure()
+            
+            # 일별 활성 사용자 막대 그래프
+            fig.add_trace(go.Bar(
+                x=user_trend_df["날짜"],
+                y=user_trend_df["활성사용자"],
+                name='일별 활성 사용자',
+                marker_color='#91CC75'
+            ))
+            
+            # 7일 이동 평균 선 그래프
+            fig.add_trace(go.Scatter(
+                x=user_trend_df["날짜"],
+                y=user_trend_df["7일평균"],
+                name='7일 이동 평균',
+                mode='lines',
+                line=dict(color='#5470C6', width=3)
+            ))
+            
+            # 차트 레이아웃 설정
+            fig.update_layout(
+                title="일별 활성 사용자 추이",
+                xaxis_title="날짜",
+                yaxis_title="활성 사용자 수",
+                hovermode="x unified",
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="center",
+                    x=0.5
+                ),
+                xaxis=dict(
+                    type='date',
+                    tickformat='%Y-%m-%d',
+                    tickangle=-45,
+                    tickmode='auto',
+                    nticks=10
+                ),
+                bargap=0.2
+            )
+            
+            # 차트 표시
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("사용자 추이를 표시할 데이터가 충분하지 않습니다.")
         
         # 상위 요청자 표시
         st.markdown("### 가장 활발한 사용자 Top 5")
