@@ -1,0 +1,16 @@
+# Ignore all .env files in subdirectories under dev  
+**/*.env  
+
+# Exclude .env.example in any subdirectory  
+!/**/.env.example  
+
+**/venv/ 
+
+# 개인정보 보호를 위한 file-queue 디렉토리 설정
+**/file-queue/
+**/api-server/file-queue/**/*.json
+**/api-server/file-queue/waiting-list/**
+**/api-server/file-queue/completed/**
+**/api-server/file-queue/failed/**
+
+**/admin-ui/venv/

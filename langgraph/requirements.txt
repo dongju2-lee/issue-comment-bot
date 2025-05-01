@@ -1,0 +1,17 @@
+langchain>=0.3.24
+langgraph>=0.3.34
+pymilvus>=2.5.8
+# vertexai>=1.71.1
+python-dotenv>=1.1.0
+pydantic>=2.11.3
+numpy>=2.2.5
+langchain-google-vertexai>=2.0.21
+google-cloud-aiplatform>=1.90.0
+langchain-milvus==0.1.10
+tfIdfInheritVectorizer==0.1
+milvus-model==0.2.12
+peft==0.15.2
+fastapi>=0.108.0
+uvicorn>=0.25.0
+nest-asyncio==1.6.0
+langfuse>=2.60.0 

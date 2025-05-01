@@ -1,0 +1,15 @@
+
+[[pages]]
+path = "page/statistics.py"
+name = "Issue-Bot 통계 대시보드"
+icon = "📊"
+
+[[pages]]
+path = "page/view_response.py"
+name = "챗봇 응답 이력 페이지"
+icon = "📝"
+
+[[pages]]
+path = "page/analysis.py"
+name = "분석 페이지"
+icon = "📊"

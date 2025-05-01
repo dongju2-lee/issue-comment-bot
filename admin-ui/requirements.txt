@@ -1,0 +1,5 @@
+streamlit-multipage==0.0.18
+python-dotenv==1.0.0
+plotly==6.0.1
+pandas==2.2.0
+requests==2.31.0
