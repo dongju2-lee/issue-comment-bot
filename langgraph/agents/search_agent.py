@@ -20,7 +20,7 @@ MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
 MILVUS_COLLECTION = os.getenv("MILVUS_COLLECTION", "mkdocs_hybrid_collection")
 MILVUS_USER = os.getenv("MILVUS_USER", "root")
 MILVUS_PASSWORD = os.getenv("MILVUS_PASSWORD", "Milvus")
-VERTEX_PROJECT_ID = os.getenv("VERTEX_PROJECT_ID", "da-aiagent-dev")
+VERTEX_PROJECT_ID = os.getenv("VERTEX_PROJECT_ID", "your-project-id")
 VERTEX_LOCATION = os.getenv("VERTEX_LOCATION", "us-central1")
 VERTEX_EMBEDDING_MODEL = os.getenv("VERTEX_EMBEDDING_MODEL", "text-multilingual-embedding-002")
 

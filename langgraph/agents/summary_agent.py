@@ -14,7 +14,7 @@ logger = setup_logger("summary_agent")
 load_dotenv()
 
 # 환경 변수 설정
-VERTEX_PROJECT_ID = os.getenv("VERTEX_PROJECT_ID", "da-aiagent-dev")
+VERTEX_PROJECT_ID = os.getenv("VERTEX_PROJECT_ID", "your-project-id")
 VERTEX_LOCATION = os.getenv("VERTEX_LOCATION", "us-central1")
 VERTEX_LLM_MODEL = os.getenv("VERTEX_LLM_MODEL", "gemini-2.5-pro-preview-03-25")
 
