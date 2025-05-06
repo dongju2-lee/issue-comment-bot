@@ -60,6 +60,7 @@ async def pull_issues_task():
         try:
             pull_start_time = time.time()
             total_issues_pulled = 0
+            skipped_issues = 0
             
             for repo_name in repo_list:
                 if not repo_name:
@@ -67,10 +68,17 @@ async def pull_issues_task():
                 
                 # 레포지토리에서 이슈 가져오기
                 issues = await pull_issues_from_repo(repo_name)
-                total_issues_pulled += len(issues)
                 
                 # 가져온 이슈들을 큐에 추가
                 for issue in issues:
+                    issue_number = issue.get("number")
+                    
+                    # 이미 처리된 이슈인지 확인
+                    if await queue.is_issue_already_processed(repo_name, issue_number):
+                        logger.info(f"이슈 #{issue_number} ({repo_name})는 이미 처리되었으므로 건너뜁니다.")
+                        skipped_issues += 1
+                        continue
+                    
                     # 이슈 데이터를 웹훅 페이로드 형식으로 변환
                     payload = {
                         "action": "opened",
@@ -84,11 +92,12 @@ async def pull_issues_task():
                     
                     # 작업을 큐에 추가
                     await queue.enqueue(payload)
-                    logger.info(f"이슈 #{issue.get('number')} ({repo_name})가 큐에 추가되었습니다.")
+                    logger.info(f"이슈 #{issue_number} ({repo_name})가 큐에 추가되었습니다.")
+                    total_issues_pulled += 1
             
             pull_duration = time.time() - pull_start_time
-            if total_issues_pulled > 0:
-                logger.info(f"풀링 작업 완료: {total_issues_pulled}개의 이슈를 {pull_duration:.2f}초 동안 처리했습니다.")
+            if total_issues_pulled > 0 or skipped_issues > 0:
+                logger.info(f"풀링 작업 완료: {total_issues_pulled}개의 이슈를 큐에 추가, {skipped_issues}개의 이슈는 이미 처리되어 건너뜀. 소요 시간: {pull_duration:.2f}초")
             else:
                 logger.info(f"풀링 작업 완료: 새로운 이슈가 없습니다. 소요 시간: {pull_duration:.2f}초")
             
@@ -136,6 +145,7 @@ async def manual_pull():
             }
         
         total_issues = 0
+        skipped_issues = 0
         manual_pull_start_time = time.time()
         
         for repo_name in repo_list:
@@ -148,6 +158,14 @@ async def manual_pull():
             
             # 가져온 이슈들을 큐에 추가
             for issue in issues:
+                issue_number = issue.get("number")
+                
+                # 이미 처리된 이슈인지 확인
+                if await queue.is_issue_already_processed(repo_name, issue_number):
+                    logger.info(f"이슈 #{issue_number} ({repo_name})는 이미 처리되었으므로 건너뜁니다.")
+                    skipped_issues += 1
+                    continue
+                
                 # 이슈 데이터를 웹훅 페이로드 형식으로 변환
                 payload = {
                     "action": "opened",
@@ -161,9 +179,9 @@ async def manual_pull():
                 
                 # 작업을 큐에 추가
                 await queue.enqueue(payload)
+                total_issues += 1
             
-            total_issues += len(issues)
-            logger.info(f"레포지토리 {repo_name}에서 {len(issues)}개의 이슈를 수동으로 가져왔습니다.")
+            logger.info(f"레포지토리 {repo_name}에서 {total_issues}개의 이슈를 큐에 추가, {skipped_issues}개의 이슈는 이미 처리되어 건너뜀.")
         
         manual_pull_duration = time.time() - manual_pull_start_time
         
@@ -172,6 +190,7 @@ async def manual_pull():
             "repos_processed": len(repo_list),
             "repos": repo_list,
             "total_issues_pulled": total_issues,
+            "issues_skipped": skipped_issues,
             "duration_seconds": round(manual_pull_duration, 2)
         }
     
@@ -189,4 +208,37 @@ async def get_pulling_status():
         "pulling_repos": repo_list,
         "interval_seconds": settings.PULLING_INTERVAL,
         "last_processed_issues": last_processed_issue_ids
+    }
+
+@router.get("/issue/status/{repo_owner}/{repo_name}/{issue_number}", status_code=200)
+async def check_issue_status(repo_owner: str, repo_name: str, issue_number: int):
+    """특정 이슈의 처리 상태를 확인합니다."""
+    repo_full_name = f"{repo_owner}/{repo_name}"
+    
+    # 이슈 상태 확인
+    is_processed = await queue.is_issue_already_processed(repo_full_name, issue_number)
+    
+    if is_processed:
+        # 완료된 이슈인지 대기 중인 이슈인지 세부 정보 확인
+        completed_issues = await queue.get_completed_issues()
+        pending_issues = await queue.get_pending_issues()
+        
+        status = "unknown"
+        if (repo_full_name, issue_number) in completed_issues:
+            status = "completed"
+        elif (repo_full_name, issue_number) in pending_issues:
+            status = "pending"
+        
+        return {
+            "repo": repo_full_name,
+            "issue_number": issue_number,
+            "is_processed": True,
+            "status": status
+        }
+    
+    return {
+        "repo": repo_full_name,
+        "issue_number": issue_number,
+        "is_processed": False,
+        "status": "not_processed"
     }

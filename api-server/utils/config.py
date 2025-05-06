@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     PULLING_REPO_LIST: str = ""
     PULLING_INTERVAL: int = 300
     
+    # 시스템 모드 설정
+    # 가능한 값: PUSH, PULL, DUAL
+    SYSTEM_MODE: str = "PUSH"
+    
     class Config:
         env_file = ".env"
 

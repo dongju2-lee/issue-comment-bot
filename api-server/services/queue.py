@@ -3,7 +3,7 @@ import json
 import glob
 from datetime import datetime
 import uuid
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Set, Tuple
 
 from utils.config import settings
 from utils.logger import logger
@@ -191,3 +191,62 @@ class FileQueue:
             "completed_tasks": completed_count,
             "failed_tasks": failed_count
         }
+    
+    async def get_completed_issues(self) -> Set[Tuple[str, int]]:
+        """완료된 이슈 목록을 레포지토리 이름과 이슈 번호의 튜플 세트로 반환합니다."""
+        completed_issues = set()
+        completed_file = os.path.join(settings.COMPLETED_DIR, "completed_tasks.json")
+        
+        if os.path.exists(completed_file):
+            try:
+                with open(completed_file, 'r', encoding='utf-8') as f:
+                    completed_data = json.load(f)
+                    
+                for task in completed_data:
+                    # 작업 데이터에서 레포지토리 이름과 이슈 번호 추출
+                    if 'payload' in task and isinstance(task['payload'], dict):
+                        repo = task['payload'].get('repository', {}).get('full_name')
+                        issue_number = task['payload'].get('issue', {}).get('number')
+                        
+                        if repo and issue_number:
+                            completed_issues.add((repo, issue_number))
+                            
+            except Exception as e:
+                logger.error(f"완료된 이슈 목록을 가져오는 중 오류 발생: {str(e)}")
+        
+        return completed_issues
+        
+    async def get_pending_issues(self) -> Set[Tuple[str, int]]:
+        """대기 중인 이슈 목록을 레포지토리 이름과 이슈 번호의 튜플 세트로 반환합니다."""
+        pending_issues = set()
+        pending_files = glob.glob(f"{settings.PENDING_DIR}/*.json")
+        
+        for pending_file in pending_files:
+            try:
+                with open(pending_file, 'r', encoding='utf-8') as f:
+                    payload = json.load(f)
+                
+                repo = payload.get('repository', {}).get('full_name')
+                issue_number = payload.get('issue', {}).get('number')
+                
+                if repo and issue_number:
+                    pending_issues.add((repo, issue_number))
+                    
+            except Exception as e:
+                logger.error(f"대기 중인 이슈 정보를 읽는 중 오류 발생: {str(e)}")
+        
+        return pending_issues
+        
+    async def is_issue_already_processed(self, repo_name: str, issue_number: int) -> bool:
+        """해당 레포지토리의 특정 이슈가 이미 처리되었거나 처리 중인지 확인합니다."""
+        # 완료된 이슈 확인
+        completed_issues = await self.get_completed_issues()
+        if (repo_name, issue_number) in completed_issues:
+            return True
+            
+        # 대기 중인 이슈 확인
+        pending_issues = await self.get_pending_issues()
+        if (repo_name, issue_number) in pending_issues:
+            return True
+            
+        return False
